@@ -91,10 +91,10 @@ namespace TransLoc_v1
 
                 routeMap = await getRoutesAsync();
                 vehicleMap = await getVehicleStatusesAsync();
-                await getStopsInRangeAsync(
+                /*await getStopsInRangeAsync(
                     (float) position.Coordinate.Latitude, 
                     (float)position.Coordinate.Longitude, 
-                    100);
+                    100);*/
                 await UpdateTimesAsync(routeMap);
             }
             catch (Exception ex)
