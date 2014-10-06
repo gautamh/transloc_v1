@@ -34,6 +34,7 @@ namespace TransLoc_v1
             //BuildLocalizedApplicationBar();
         }
 
+        //gets time of next arrival and updates UI
         private async Task UpdateTimesAsync(Dictionary<string, string> routes)
         {
             string stop = "4117202";
@@ -44,7 +45,7 @@ namespace TransLoc_v1
             //https://transloc-api-1-2.p.mashape.com/arrival-estimates.json?agencies=176&stops=4117206
             string url = "https://transloc-api-1-2.p.mashape.com/arrival-estimates.json" +
                 "?agencies={0}"+
-                "&stops={1}";
+                "&stops={1}";//json URL
 
             string queryUrl = string.Format(url, agency, stop);
             string translocResult = await client.GetStringAsync(queryUrl);
@@ -83,17 +84,18 @@ namespace TransLoc_v1
         private async void PhoneApplicationPage_Loaded(object sender, RoutedEventArgs e)
         {
             Geolocator locator = new Geolocator();
-            locator.DesiredAccuracyInMeters = 10;
+            locator.DesiredAccuracyInMeters = 15;
 
             try
             {
-                Geoposition position = await locator.GetGeopositionAsync();
+                Geoposition position = await locator.GetGeopositionAsync(TimeSpan.FromSeconds(30),
+                                                                         TimeSpan.FromSeconds(5)); ;//get current position
 
                 routeMap = await getRoutesAsync();
                 vehicleMap = await getVehicleStatusesAsync();
                 await getStopsInRangeAsync(
-                    (float) position.Coordinate.Latitude, 
-                    (float)position.Coordinate.Longitude, 
+                    position.Coordinate.Latitude, 
+                    position.Coordinate.Longitude, 
                     100);
                 await UpdateTimesAsync(routeMap);
             }
@@ -122,6 +124,7 @@ namespace TransLoc_v1
             }
         }
 
+        //returns dictionary of routes
         private async Task<Dictionary<string, string>> getRoutesAsync ()
         {
             agency.Replace(",", "%2C");
@@ -146,6 +149,7 @@ namespace TransLoc_v1
 
         }
 
+        //returns dictionary of vehicle statuses
         private async Task<Dictionary<int, Vehicle>> getVehicleStatusesAsync ()
         {
             string url = "http://feeds.transloc.com/3/vehicle_statuses.jsonp"+ "?agencies={0}" +"&callback=?";
@@ -167,8 +171,9 @@ namespace TransLoc_v1
             return vehicles;
         }
 
+        //gets stops within range of coordinates
         private async Task<Dictionary<int, Stop>> getStopsInRangeAsync 
-            (float latitude, float longitude, int range)
+            (double latitude, double longitude, int range)
         {
             string url = "https://transloc-api-1-2.p.mashape.com/stops.json" +
                 "?agencies={0}" + "&" +"geo_area={1},{2}|{3}";
