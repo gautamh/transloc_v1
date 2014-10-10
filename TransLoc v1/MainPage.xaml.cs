@@ -19,7 +19,11 @@ namespace TransLoc_v1
     public partial class MainPage : PhoneApplicationPage
     {
         Dictionary<string, string> routeMap = new Dictionary<string, string>();
+        Dictionary<string, Stop> stopMap = new Dictionary<string, Stop>();
+        List<KeyValuePair<string, Stop>> stopList = new List<KeyValuePair<string, Stop>>();
         Dictionary<int, Vehicle> vehicleMap = new Dictionary<int, Vehicle>();
+
+        public static Geoposition currentPosition;
         HttpClient client;
         public string agency = "176";
 
@@ -37,14 +41,23 @@ namespace TransLoc_v1
         //gets time of next arrival and updates UI
         private async Task UpdateTimesAsync(Dictionary<string, string> routes)
         {
-            string stop = "4117202";
+            //string stop = "4117202";
+            string stop;
+            if (stopList.Count > 0)
+            {
+                stop = stopList[0].Value.StopId;
+            }
+            else
+            {
+                stop = "4117202";
+            }
 
             agency.Replace(",", "%2C");
             stop.Replace(",", "%2C");
 
             //https://transloc-api-1-2.p.mashape.com/arrival-estimates.json?agencies=176&stops=4117206
             string url = "https://transloc-api-1-2.p.mashape.com/arrival-estimates.json" +
-                "?agencies={0}"+
+                "?agencies={0}" +
                 "&stops={1}";//json URL
 
             string queryUrl = string.Format(url, agency, stop);
@@ -56,7 +69,7 @@ namespace TransLoc_v1
             if (apiData != null)
             {
                 StopArrivals currentStop = null;
-                foreach(StopArrivals stopInfo in apiData.data)
+                foreach (StopArrivals stopInfo in apiData.data)
                 {
                     if (stopInfo.stop_id == stop)
                     {
@@ -73,8 +86,8 @@ namespace TransLoc_v1
                 string nextBus = String.Format("Next Arrival at: {0}\n"
                     + "Route ID: {1}\n"
                     + "Vehicle is {2}% full\n"
-                    ,time.ToShortTimeString(), 
-                    routeMap[nextArrival.route_id], 
+                    , time.ToShortTimeString(),
+                    routeMap[nextArrival.route_id],
                     vehicleMap[Convert.ToInt32(nextArrival.vehicle_id)].load * 100);
 
                 Result.Text = nextBus;
@@ -88,25 +101,33 @@ namespace TransLoc_v1
 
             try
             {
-                Geoposition position = await locator.GetGeopositionAsync(TimeSpan.FromSeconds(30),
-                                                                         TimeSpan.FromSeconds(5)); ;//get current position
+                currentPosition = await locator.GetGeopositionAsync(TimeSpan.FromSeconds(30),
+                                                                        TimeSpan.FromSeconds(5)); ;//get current position
 
                 routeMap = await getRoutesAsync();
                 vehicleMap = await getVehicleStatusesAsync();
-                await getStopsInRangeAsync(
-                    position.Coordinate.Latitude, 
-                    position.Coordinate.Longitude, 
-                    100);
+                stopMap = await getStopsInRangeAsync(
+                    currentPosition.Coordinate.Latitude,
+                    currentPosition.Coordinate.Longitude,
+                    250);
+                stopList = stopMap.ToList();
+                stopList.Sort(
+                    delegate(KeyValuePair<string, Stop> firstPair,
+                    KeyValuePair<string, Stop> nextPair)
+                    {
+                        return firstPair.Value.CompareTo(nextPair.Value);
+                    });
+
                 await UpdateTimesAsync(routeMap);
             }
             catch (Exception ex)
             {
                 Result.Text = ex.Message;
             }
-             //getRoutesAsync(() =>
-             //   {
-             //       UpdateTimesAsync();
-             //   });
+            //getRoutesAsync(() =>
+            //   {
+            //       UpdateTimesAsync();
+            //   });
         }
 
         private async void btnRefresh_Click(object sender, RoutedEventArgs e)
@@ -125,7 +146,7 @@ namespace TransLoc_v1
         }
 
         //returns dictionary of routes
-        private async Task<Dictionary<string, string>> getRoutesAsync ()
+        private async Task<Dictionary<string, string>> getRoutesAsync()
         {
             agency.Replace(",", "%2C");
             Dictionary<string, string> routes = new Dictionary<string, string>();
@@ -150,9 +171,9 @@ namespace TransLoc_v1
         }
 
         //returns dictionary of vehicle statuses
-        private async Task<Dictionary<int, Vehicle>> getVehicleStatusesAsync ()
+        private async Task<Dictionary<int, Vehicle>> getVehicleStatusesAsync()
         {
-            string url = "http://feeds.transloc.com/3/vehicle_statuses.jsonp"+ "?agencies={0}" +"&callback=?";
+            string url = "http://feeds.transloc.com/3/vehicle_statuses.jsonp" + "?agencies={0}" + "&callback=?";
             Dictionary<int, Vehicle> vehicles = new Dictionary<int, Vehicle>();
 
             string queryUrl = string.Format(url, agency);
@@ -172,13 +193,13 @@ namespace TransLoc_v1
         }
 
         //gets stops within range of coordinates
-        private async Task<Dictionary<int, Stop>> getStopsInRangeAsync 
+        private async Task<Dictionary<string, Stop>> getStopsInRangeAsync
             (double latitude, double longitude, int range)
         {
             string url = "https://transloc-api-1-2.p.mashape.com/stops.json" +
-                "?agencies={0}" + "&" +"geo_area={1},{2}|{3}";
-            
-            Dictionary<int, Stop> stops = new Dictionary<int, Stop>();
+                "?agencies={0}" + "&" + "geo_area={1},{2}|{3}";
+
+            Dictionary<string, Stop> stops = new Dictionary<string, Stop>();
             string queryUrl = string.Format(url, agency, latitude, longitude, range);
             string translocResult = await client.GetStringAsync(Uri.EscapeUriString(queryUrl));
 
@@ -187,7 +208,7 @@ namespace TransLoc_v1
             {
                 foreach (Stop s in apiData.Data)
                 {
-                    stops.Add(Convert.ToInt32(s.StationId), s);
+                    stops.Add(s.StopId, s);
                 }
             }
 
@@ -209,213 +230,235 @@ namespace TransLoc_v1
         //    ApplicationBarMenuItem appBarMenuItem = new ApplicationBarMenuItem(AppResources.AppBarMenuItemText);
         //    ApplicationBar.MenuItems.Add(appBarMenuItem);
         //}
-    }
-
-    //Arrival Estimate classes
-    public class Arrival
-    {
-        public string route_id { get; set; }
-        public string vehicle_id { get; set; }
-        public string arrival_at { get; set; }
-        public string type { get; set; }
-    }
-
-    public class StopArrivals
-    {
-        public List<Arrival> arrivals { get; set; }
-        public string agency_id { get; set; }
-        public string stop_id { get; set; }
-    }
-
-    public class ArrivalData
-    {
-        public int rate_limit { get; set; }
-        public int expires_in { get; set; }
-        public string api_latest_version { get; set; }
-        public string generated_on { get; set; }
-        public List<StopArrivals> data { get; set; }
-        public string api_version { get; set; }
-    }
 
 
-//Route Classes
-    public class Route
-    {
-        public Route ()
+        //Arrival Estimate classes
+        public class Arrival
         {
-            return;
+            public string route_id { get; set; }
+            public string vehicle_id { get; set; }
+            public string arrival_at { get; set; }
+            public string type { get; set; }
         }
 
-        [JsonProperty("description")]
-        public string Description { get; set; }
+        public class StopArrivals
+        {
+            public List<Arrival> arrivals { get; set; }
+            public string agency_id { get; set; }
+            public string stop_id { get; set; }
+        }
 
-        [JsonProperty("short_name")]
-        public string ShortName { get; set; }
+        public class ArrivalData
+        {
+            public int rate_limit { get; set; }
+            public int expires_in { get; set; }
+            public string api_latest_version { get; set; }
+            public string generated_on { get; set; }
+            public List<StopArrivals> data { get; set; }
+            public string api_version { get; set; }
+        }
 
-        [JsonProperty("route_id")]
-        public string RouteId { get; set; }
 
-        [JsonProperty("color")]
-        public string Color { get; set; }
+        //Route Classes
+        public class Route
+        {
+            public Route()
+            {
+                return;
+            }
 
-        [JsonProperty("segments")]
-        public string[][] Segments { get; set; }
+            [JsonProperty("description")]
+            public string Description { get; set; }
 
-        [JsonProperty("is_active")]
-        public bool IsActive { get; set; }
+            [JsonProperty("short_name")]
+            public string ShortName { get; set; }
 
-        [JsonProperty("agency_id")]
-        public int AgencyId { get; set; }
+            [JsonProperty("route_id")]
+            public string RouteId { get; set; }
 
-        [JsonProperty("text_color")]
-        public string TextColor { get; set; }
+            [JsonProperty("color")]
+            public string Color { get; set; }
 
-        [JsonProperty("long_name")]
-        public string LongName { get; set; }
+            [JsonProperty("segments")]
+            public string[][] Segments { get; set; }
 
-        [JsonProperty("url")]
-        public string Url { get; set; }
+            [JsonProperty("is_active")]
+            public bool IsActive { get; set; }
 
-        [JsonProperty("is_hidden")]
-        public bool IsHidden { get; set; }
+            [JsonProperty("agency_id")]
+            public int AgencyId { get; set; }
 
-        [JsonProperty("type")]
-        public string Type { get; set; }
+            [JsonProperty("text_color")]
+            public string TextColor { get; set; }
 
-        [JsonProperty("stops")]
-        public string[] Stops { get; set; }
-    }
+            [JsonProperty("long_name")]
+            public string LongName { get; set; }
 
-    public class Data
-    {
-        public Data ()
+            [JsonProperty("url")]
+            public string Url { get; set; }
+
+            [JsonProperty("is_hidden")]
+            public bool IsHidden { get; set; }
+
+            [JsonProperty("type")]
+            public string Type { get; set; }
+
+            [JsonProperty("stops")]
+            public string[] Stops { get; set; }
+        }
+
+        public class Data
+        {
+            public Data()
+            {
+
+            }
+
+            [JsonProperty("176")]
+            public Route[] routes { get; set; }
+        }
+
+
+
+        public class RootObject
+        {
+            public RootObject()
+            {
+
+            }
+
+            [JsonProperty("rate_limit")]
+            public int RateLimit { get; set; }
+
+            [JsonProperty("expires_in")]
+            public int ExpiresIn { get; set; }
+
+            [JsonProperty("api_latest_version")]
+            public string ApiLatestVersion { get; set; }
+
+            [JsonProperty("generated_on")]
+            public string GeneratedOn { get; set; }
+
+            [JsonProperty("data")]
+            public Data data { get; set; }
+
+            [JsonProperty("api_version")]
+            public string ApiVersion { get; set; }
+        }
+
+        //Vehicle Objects
+        public class Vehicle
+        {
+            public int agency_id { get; set; }
+            public string apc_status { get; set; }
+            public string call_name { get; set; }
+            public int? current_stop_id { get; set; }
+            public int heading { get; set; }
+            public int id { get; set; }
+            public double? load { get; set; }
+            public List<double> position { get; set; }
+            public int route_id { get; set; }
+            public int? segment_id { get; set; }
+            public double speed { get; set; }
+            public object timestamp { get; set; }
+        }
+
+        public class VehicleRootObject
+        {
+            public bool success { get; set; }
+            public List<Vehicle> vehicles { get; set; }
+        }
+
+        //Stop Objects
+        public class Location
         {
 
+            [JsonProperty("lat")]
+            public double Lat;
+
+            [JsonProperty("lng")]
+            public double Lng;
         }
 
-        [JsonProperty("176")]
-        public Route[] routes { get; set; }
-    }
+        public class Stop : IComparable
+        {
 
+            [JsonProperty("code")]
+            public string Code;
 
+            [JsonProperty("description")]
+            public string Description;
 
-    public class RootObject
-    {
-        public RootObject ()
-        { 
+            [JsonProperty("url")]
+            public string Url;
 
+            [JsonProperty("parent_station_id")]
+            public object ParentStationId;
+
+            [JsonProperty("agency_ids")]
+            public string[] AgencyIds;
+
+            [JsonProperty("station_id")]
+            public object StationId;
+
+            [JsonProperty("location_type")]
+            public string LocationType;
+
+            [JsonProperty("location")]
+            public Location Location;
+
+            [JsonProperty("stop_id")]
+            public string StopId;
+
+            [JsonProperty("routes")]
+            public string[] Routes;
+
+            [JsonProperty("name")]
+            public string Name;
+
+            public int CompareTo(Object obj)
+            {
+                Stop other = (Stop)obj;
+                double lat2 = currentPosition.Coordinate.Latitude;
+                double lon2 = currentPosition.Coordinate.Longitude;
+            
+                double lat1 = this.Location.Lat;
+                double lon1 = this.Location.Lng;
+
+                double distance1 = Math.Sqrt(Math.Pow(lat2 - lat1, 2) + 
+                    Math.Cos(lat1) * Math.Pow(lon2 - lon1, 2));
+
+                lat1 = other.Location.Lat;
+                lon1 = other.Location.Lng;
+
+                double distance2 = Math.Sqrt(Math.Pow(lat2 - lat1, 2) +
+                    Math.Cos(lat1) * Math.Pow(lon2 - lon1, 2));
+
+                return (int)((distance1 - distance2) * 1000000);
+            }
         }
 
-        [JsonProperty("rate_limit")]
-        public int RateLimit { get; set; }
+        public class StopRootObject
+        {
 
-        [JsonProperty("expires_in")]
-        public int ExpiresIn { get; set; }
+            [JsonProperty("rate_limit")]
+            public int RateLimit;
 
-        [JsonProperty("api_latest_version")]
-        public string ApiLatestVersion { get; set; }
+            [JsonProperty("expires_in")]
+            public int ExpiresIn;
 
-        [JsonProperty("generated_on")]
-        public string GeneratedOn { get; set; }
+            [JsonProperty("api_latest_version")]
+            public string ApiLatestVersion;
 
-        [JsonProperty("data")]
-        public Data data { get; set; }
+            [JsonProperty("generated_on")]
+            public string GeneratedOn;
 
-        [JsonProperty("api_version")]
-        public string ApiVersion { get; set; }
-    }
+            [JsonProperty("data")]
+            public Stop[] Data;
 
-//Vehicle Objects
-    public class Vehicle
-    {
-        public int agency_id { get; set; }
-        public string apc_status { get; set; }
-        public string call_name { get; set; }
-        public int? current_stop_id { get; set; }
-        public int heading { get; set; }
-        public int id { get; set; }
-        public double? load { get; set; }
-        public List<double> position { get; set; }
-        public int route_id { get; set; }
-        public int? segment_id { get; set; }
-        public double speed { get; set; }
-        public object timestamp { get; set; }
-    }
-
-    public class VehicleRootObject
-    {
-        public bool success { get; set; }
-        public List<Vehicle> vehicles { get; set; }
-    }
-
- //Stop Objects
-    public class Location
-    {
-
-        [JsonProperty("lat")]
-        public double Lat;
-
-        [JsonProperty("lng")]
-        public double Lng;
-    }
-
-    public class Stop
-    {
-
-        [JsonProperty("code")]
-        public string Code;
-
-        [JsonProperty("description")]
-        public string Description;
-
-        [JsonProperty("url")]
-        public string Url;
-
-        [JsonProperty("parent_station_id")]
-        public object ParentStationId;
-
-        [JsonProperty("agency_ids")]
-        public string[] AgencyIds;
-
-        [JsonProperty("station_id")]
-        public object StationId;
-
-        [JsonProperty("location_type")]
-        public string LocationType;
-
-        [JsonProperty("location")]
-        public Location Location;
-
-        [JsonProperty("stop_id")]
-        public string StopId;
-
-        [JsonProperty("routes")]
-        public string[] Routes;
-
-        [JsonProperty("name")]
-        public string Name;
-    }
-
-    public class StopRootObject
-    {
-
-        [JsonProperty("rate_limit")]
-        public int RateLimit;
-
-        [JsonProperty("expires_in")]
-        public int ExpiresIn;
-
-        [JsonProperty("api_latest_version")]
-        public string ApiLatestVersion;
-
-        [JsonProperty("generated_on")]
-        public string GeneratedOn;
-
-        [JsonProperty("data")]
-        public Stop[] Data;
-
-        [JsonProperty("api_version")]
-        public string ApiVersion;
+            [JsonProperty("api_version")]
+            public string ApiVersion;
+        }
     }
 
 
