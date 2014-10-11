@@ -39,7 +39,7 @@ namespace TransLoc_v1
         }
 
         //gets time of next arrival and updates UI
-        private async Task UpdateTimesAsync(Dictionary<string, string> routes)
+        private async Task<Arrival> ArrivalTimeAsync()
         {
             //string stop = "4117202";
             string stop;
@@ -79,38 +79,31 @@ namespace TransLoc_v1
                 }
 
                 Arrival nextArrival = currentStop.arrivals[0];
-                DateTime time = DateTime.Parse(nextArrival.arrival_at);
-
-                Result.Text = "Loading...";
-
-                string nextBus = String.Format("Next Arrival at: {0}\n"
-                    + "Route ID: {1}\n"
-                    + "Vehicle is {2}% full\n"
-                    , time.ToShortTimeString(),
-                    routeMap[nextArrival.route_id],
-                    vehicleMap[Convert.ToInt32(nextArrival.vehicle_id)].load * 100);
-
-                Result.Text = nextBus;
+                return nextArrival;
             }
+
+
+            return null;
         }
 
         private async void PhoneApplicationPage_Loaded(object sender, RoutedEventArgs e)
         {
             Geolocator locator = new Geolocator();
             locator.DesiredAccuracyInMeters = 15;
+            Result.Text = "Loading...";
 
             try
             {
                 currentPosition = await locator.GetGeopositionAsync(TimeSpan.FromSeconds(30),
                                                                         TimeSpan.FromSeconds(5)); ;//get current position
-
+                //update routes, vehicles, and stops in range (async
                 routeMap = await getRoutesAsync();
                 vehicleMap = await getVehicleStatusesAsync();
                 stopMap = await getStopsInRangeAsync(
                     currentPosition.Coordinate.Latitude,
                     currentPosition.Coordinate.Longitude,
                     250);
-                stopList = stopMap.ToList();
+                stopList = stopMap.ToList();//sort stops by distance from current location
                 stopList.Sort(
                     delegate(KeyValuePair<string, Stop> firstPair,
                     KeyValuePair<string, Stop> nextPair)
@@ -118,7 +111,20 @@ namespace TransLoc_v1
                         return firstPair.Value.CompareTo(nextPair.Value);
                     });
 
-                await UpdateTimesAsync(routeMap);
+                Arrival nextArrival = await ArrivalTimeAsync();//get next bus arrival and current stop
+                DateTime time = DateTime.Parse(nextArrival.arrival_at);//get next arrival time
+
+                //format display string
+                string nextBus = String.Format("Next Arrival at: {0}\n"
+                    + "Route ID: {1}\n"
+                    + "Vehicle is {2}% full\n"
+                    , time.ToShortTimeString(),
+                    routeMap[nextArrival.route_id],
+                    vehicleMap[Convert.ToInt32(nextArrival.vehicle_id)].load * 100);
+
+                //update UI
+                Result.Text = nextBus;
+                txtHeading.Text = stopList[0].Value.Name;
             }
             catch (Exception ex)
             {
@@ -135,9 +141,20 @@ namespace TransLoc_v1
 
             try
             {
-                routeMap = await getRoutesAsync();
-                vehicleMap = await getVehicleStatusesAsync();
-                await UpdateTimesAsync(routeMap);
+                Arrival nextArrival = await ArrivalTimeAsync();//get next bus arrival and current stop
+                DateTime time = DateTime.Parse(nextArrival.arrival_at);//get next arrival time
+
+                //format display string
+                string nextBus = String.Format("Next Arrival at: {0}\n"
+                    + "Route ID: {1}\n"
+                    + "Vehicle is {2}% full\n"
+                    , time.ToShortTimeString(),
+                    routeMap[nextArrival.route_id],
+                    vehicleMap[Convert.ToInt32(nextArrival.vehicle_id)].load * 100);
+
+                //update UI
+                Result.Text = nextBus;
+                txtHeading.Text = stopList[0].Value.Name;
             }
             catch (Exception ex)
             {
