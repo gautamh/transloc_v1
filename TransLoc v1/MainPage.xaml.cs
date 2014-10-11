@@ -38,54 +38,6 @@ namespace TransLoc_v1
             //BuildLocalizedApplicationBar();
         }
 
-        //gets time of next arrival and updates UI
-        private async Task<Arrival> ArrivalTimeAsync()
-        {
-            //string stop = "4117202";
-            string stop;
-            if (stopList.Count > 0)
-            {
-                stop = stopList[0].Value.StopId;
-            }
-            else
-            {
-                stop = "4117202";
-            }
-
-            agency.Replace(",", "%2C");
-            stop.Replace(",", "%2C");
-
-            //https://transloc-api-1-2.p.mashape.com/arrival-estimates.json?agencies=176&stops=4117206
-            string url = "https://transloc-api-1-2.p.mashape.com/arrival-estimates.json" +
-                "?agencies={0}" +
-                "&stops={1}";//json URL
-
-            string queryUrl = string.Format(url, agency, stop);
-            string translocResult = await client.GetStringAsync(queryUrl);
-
-            //Result.Text = translocResult;
-            ArrivalData apiData = JsonConvert.DeserializeObject<ArrivalData>(translocResult);
-
-            if (apiData != null)
-            {
-                StopArrivals currentStop = null;
-                foreach (StopArrivals stopInfo in apiData.data)
-                {
-                    if (stopInfo.stop_id == stop)
-                    {
-                        currentStop = stopInfo;
-                        break;
-                    }
-                }
-
-                Arrival nextArrival = currentStop.arrivals[0];
-                return nextArrival;
-            }
-
-
-            return null;
-        }
-
         private async void PhoneApplicationPage_Loaded(object sender, RoutedEventArgs e)
         {
             Geolocator locator = new Geolocator();
@@ -160,6 +112,54 @@ namespace TransLoc_v1
             {
                 Result.Text = ex.Message;
             }
+        }
+
+        //gets time of next arrival and updates UI
+        private async Task<Arrival> ArrivalTimeAsync()
+        {
+            //string stop = "4117202";
+            string stop;
+            if (stopList.Count > 0)
+            {
+                stop = stopList[0].Value.StopId;
+            }
+            else
+            {
+                stop = "4117202";
+            }
+
+            agency.Replace(",", "%2C");
+            stop.Replace(",", "%2C");
+
+            //https://transloc-api-1-2.p.mashape.com/arrival-estimates.json?agencies=176&stops=4117206
+            string url = "https://transloc-api-1-2.p.mashape.com/arrival-estimates.json" +
+                "?agencies={0}" +
+                "&stops={1}";//json URL
+
+            string queryUrl = string.Format(url, agency, stop);
+            string translocResult = await client.GetStringAsync(queryUrl);
+
+            //Result.Text = translocResult;
+            ArrivalData apiData = JsonConvert.DeserializeObject<ArrivalData>(translocResult);
+
+            if (apiData != null)
+            {
+                StopArrivals currentStop = null;
+                foreach (StopArrivals stopInfo in apiData.data)
+                {
+                    if (stopInfo.stop_id == stop)
+                    {
+                        currentStop = stopInfo;
+                        break;
+                    }
+                }
+
+                Arrival nextArrival = currentStop.arrivals[0];
+                return nextArrival;
+            }
+
+
+            return null;
         }
 
         //returns dictionary of routes
