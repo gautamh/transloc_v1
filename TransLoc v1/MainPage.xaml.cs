@@ -27,6 +27,7 @@ namespace TransLoc_v1
         public static Geoposition currentPosition;
         HttpClient client;
         public string agency = "176";
+        int stopIndex = 0;
 
         // Constructor
         public MainPage()
@@ -44,6 +45,7 @@ namespace TransLoc_v1
             Geolocator locator = new Geolocator();
             locator.DesiredAccuracyInMeters = 15;
             Result.Text = "Loading...";
+            stopIndex = 0;
 
             try
             {
@@ -64,7 +66,7 @@ namespace TransLoc_v1
                         return firstPair.Value.CompareTo(nextPair.Value);
                     });
 
-                Arrival nextArrival = await ArrivalTimeAsync();//get next bus arrival and current stop
+                Arrival nextArrival = await ArrivalTimeAsync(stopIndex);//get next bus arrival and current stop
                 DateTime time = DateTime.Parse(nextArrival.arrival_at);//get next arrival time
 
                 //format display string
@@ -94,7 +96,8 @@ namespace TransLoc_v1
         {
             try
             {
-                Arrival nextArrival = await ArrivalTimeAsync();//get next bus arrival and current stop
+                stopIndex = 0;
+                Arrival nextArrival = await ArrivalTimeAsync(stopIndex);//get next bus arrival and current stop
                 DateTime time = DateTime.Parse(nextArrival.arrival_at);//get next arrival time
 
                 //format display string
@@ -116,11 +119,33 @@ namespace TransLoc_v1
             }
         }
 
-        private void btnNextStop_Click(object sender, RoutedEventArgs e)
+        private async void btnNextStop_Click(object sender, RoutedEventArgs e)
         {
             try
             {
-                throw new Exception("test exception at " + DateTime.Now, null);
+                if (stopIndex < stopList.Count)
+                {
+                    stopIndex++;
+                }
+                else
+                {
+                    stopIndex = 0;
+                }
+
+                Arrival nextArrival = await ArrivalTimeAsync(stopIndex);//get next bus arrival and current stop
+                DateTime time = DateTime.Parse(nextArrival.arrival_at);//get next arrival time
+
+                //format display string
+                string nextBus = String.Format("Next Arrival at: {0}\n"
+                    + "Route ID: {1}\n"
+                    + "Vehicle is {2}% full\n"
+                    , time.ToShortTimeString(),
+                    routeMap[nextArrival.route_id],
+                    vehicleMap[Convert.ToInt32(nextArrival.vehicle_id)].load * 100);
+
+                //update UI
+                Result.Text = nextBus;
+                txtHeading.Text = stopList[0].Value.Name;
             }
             catch (Exception ex)
             {
@@ -129,13 +154,17 @@ namespace TransLoc_v1
         }
 
         //gets time of next arrival and updates UI
-        private async Task<Arrival> ArrivalTimeAsync()
+        private async Task<Arrival> ArrivalTimeAsync(int stopListIndex)
         {
             //string stop = "4117202";
             string stop;
-            if (stopList.Count > 0)
+            if (stopList.Count >= stopListIndex)
             {
-                stop = stopList[0].Value.StopId;
+                stop = stopList[stopListIndex].Value.StopId;
+            }
+            else if (stopList.Count > 0)
+            {
+                stop = stopList[0].Value.StopId;         
             }
             else
             {
