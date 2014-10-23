@@ -58,6 +58,8 @@
             <TextBlock Grid.Row="1" Name="Result" HorizontalAlignment="Center" VerticalAlignment="Center" 
                        Width="Auto" Height="Auto"
                        TextAlignment="Left" TextWrapping="Wrap" FontSize="24"/>
+            <Button Name="btnNextStop" Content="Next Stop" Grid.Row="2" 
+                    Height="Auto" Width="200" HorizontalAlignment="Left" Click="btnNextStop_Click"/>
             <Button Name="btnRefresh" Content="Refresh" Grid.Row="2" 
                     Height="Auto" Width="200" HorizontalAlignment="Right" Click="btnRefresh_Click"/>
         </Grid>

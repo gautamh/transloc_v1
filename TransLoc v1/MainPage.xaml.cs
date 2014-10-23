@@ -13,6 +13,7 @@ using TransLoc_v1.Resources;
 using System.Net.Http;
 using Newtonsoft.Json;
 using Windows.Devices.Geolocation;
+using Microsoft.Phone.Tasks;
 
 namespace TransLoc_v1
 {
@@ -80,6 +81,7 @@ namespace TransLoc_v1
             }
             catch (Exception ex)
             {
+                sendError(ex);
                 Result.Text = ex.Message;
             }
             //getRoutesAsync(() =>
@@ -90,7 +92,6 @@ namespace TransLoc_v1
 
         private async void btnRefresh_Click(object sender, RoutedEventArgs e)
         {
-
             try
             {
                 Arrival nextArrival = await ArrivalTimeAsync();//get next bus arrival and current stop
@@ -110,7 +111,20 @@ namespace TransLoc_v1
             }
             catch (Exception ex)
             {
+                sendError(ex);
                 Result.Text = ex.Message;
+            }
+        }
+
+        private void btnNextStop_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                throw new Exception("test exception at " + DateTime.Now, null);
+            }
+            catch (Exception ex)
+            {
+                sendError(ex);
             }
         }
 
@@ -230,6 +244,28 @@ namespace TransLoc_v1
             }
 
             return stops;
+        }
+
+        private bool sendError (Exception ex)
+        {
+            try
+            {
+                string msg = "Application has thrown an exception. Report to gautamhathi@live.com?";
+                MessageBoxResult m = MessageBox.Show(msg, "Application Error", MessageBoxButton.OKCancel);
+
+                if (m == MessageBoxResult.OK)
+                {
+                    EmailComposeTask task = new EmailComposeTask();
+
+                    task.Subject = "Transloc Error";
+                    task.Body = String.Format("Message:\n{0}\n\nSource:\n{1}\n\nInnerException:\n{2}\n\nStack Trace:\n{3}",
+                        ex.Message, ex.Source, ex.InnerException, ex.StackTrace);
+                    task.To = "gautamhathi@live.com";
+                    task.Show();
+                }
+                return true;
+            }
+            catch (Exception e) { return false; }
         }
 
         // Sample code for building a localized ApplicationBar
