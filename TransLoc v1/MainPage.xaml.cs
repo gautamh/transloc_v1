@@ -123,29 +123,40 @@ namespace TransLoc_v1
         {
             try
             {
-                if (stopIndex < stopList.Count)
-                {
-                    stopIndex++;
-                }
-                else
-                {
-                    stopIndex = 0;
-                }
+                //if (stopIndex < stopList.Count)
+                //{
+                //    stopIndex++;
+                //}
+                //else
+                //{
+                //    stopIndex = 0;
+                //}
+
+                stopIndex = ((stopIndex + 1) % stopList.Count);
 
                 Arrival nextArrival = await ArrivalTimeAsync(stopIndex);//get next bus arrival and current stop
-                DateTime time = DateTime.Parse(nextArrival.arrival_at);//get next arrival time
+                string nextBus = "";
 
-                //format display string
-                string nextBus = String.Format("Next Arrival at: {0}\n"
-                    + "Route ID: {1}\n"
-                    + "Vehicle is {2}% full\n"
-                    , time.ToShortTimeString(),
-                    routeMap[nextArrival.route_id],
-                    vehicleMap[Convert.ToInt32(nextArrival.vehicle_id)].load * 100);
+                if (nextArrival != null)//if a bus will be arriving at the stop
+                {
+                    DateTime time = DateTime.Parse(nextArrival.arrival_at);//get next arrival time
+
+                    //format display string
+                    nextBus = String.Format("Next Arrival at: {0}\n"
+                        + "Route ID: {1}\n"
+                        + "Vehicle is {2}% full\n"
+                        , time.ToShortTimeString(),
+                        routeMap[nextArrival.route_id],
+                        vehicleMap[Convert.ToInt32(nextArrival.vehicle_id)].load * 100);
+                }
+                else//otherwise indicate no upcoming arrivals
+                {
+                    nextBus = "No upcoming arrivals";
+                }
 
                 //update UI
                 Result.Text = nextBus;
-                txtHeading.Text = stopList[0].Value.Name;
+                txtHeading.Text = stopList[stopIndex].Value.Name;
             }
             catch (Exception ex)
             {
@@ -187,6 +198,11 @@ namespace TransLoc_v1
 
             if (apiData != null)
             {
+                if (apiData.data.Count == 0)
+                {
+                    return null;
+                }
+
                 StopArrivals currentStop = null;
                 foreach (StopArrivals stopInfo in apiData.data)
                 {

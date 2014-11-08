@@ -43,7 +43,8 @@
         <!--TitlePanel contains the name of the application and page title-->
         <StackPanel x:Name="TitlePanel" Grid.Row="0" Margin="12,17,0,28">
             <TextBlock Text="DUKE TRANSLOC" Style="{StaticResource PhoneTextNormalStyle}" Margin="12,0"/>
-            <TextBlock Text="East Campus" Name="txtHeading" Margin="9,-7,0,0" Style="{StaticResource PhoneTextTitle1Style}"/>
+            <TextBlock Text="East Campus" Name="txtHeading" Margin="9,-7,0,0" Style="{StaticResource PhoneTextTitle1Style}"
+                       FontSize="60" TextWrapping="Wrap"/>
         </StackPanel>
 
         <!--ContentPanel - place additional content here-->
@@ -55,7 +56,7 @@
             </Grid.RowDefinitions>
             
             <TextBlock Grid.Row="0" Text="Next Arrival Time:" HorizontalAlignment="Center" VerticalAlignment="center" FontSize="56"/>
-            <TextBlock Grid.Row="1" Name="Result" HorizontalAlignment="Center" VerticalAlignment="Center" 
+            <TextBlock Grid.Row="1" Name="Result" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="10,10,10,10" 
                        Width="Auto" Height="Auto"
                        TextAlignment="Left" TextWrapping="Wrap" FontSize="24"/>
             <Button Name="btnNextStop" Content="Next Stop" Grid.Row="2" 
