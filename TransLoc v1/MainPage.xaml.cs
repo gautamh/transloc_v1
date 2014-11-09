@@ -66,7 +66,7 @@ namespace TransLoc_v1
                         return firstPair.Value.CompareTo(nextPair.Value);
                     });
 
-                Arrival nextArrival = await ArrivalTimeAsync(stopIndex);//get next bus arrival and current stop
+                Arrival nextArrival = await ArrivalTimeAsync(stopIndex, 0);//get next bus arrival and current stop
                 DateTime time = DateTime.Parse(nextArrival.arrival_at);//get next arrival time
 
                 //format display string
@@ -97,7 +97,7 @@ namespace TransLoc_v1
             try
             {
                 stopIndex = 0;
-                Arrival nextArrival = await ArrivalTimeAsync(stopIndex);//get next bus arrival and current stop
+                Arrival nextArrival = await ArrivalTimeAsync(stopIndex, 0);//get next bus arrival and current stop
                 DateTime time = DateTime.Parse(nextArrival.arrival_at);//get next arrival time
 
                 //format display string
@@ -134,7 +134,7 @@ namespace TransLoc_v1
 
                 stopIndex = ((stopIndex + 1) % stopList.Count);
 
-                Arrival nextArrival = await ArrivalTimeAsync(stopIndex);//get next bus arrival and current stop
+                Arrival nextArrival = await ArrivalTimeAsync(stopIndex, 0);//get next bus arrival and current stop
                 string nextBus = "";
 
                 if (nextArrival != null)//if a bus will be arriving at the stop
@@ -165,7 +165,7 @@ namespace TransLoc_v1
         }
 
         //gets time of next arrival and updates UI
-        private async Task<Arrival> ArrivalTimeAsync(int stopListIndex)
+        private async Task<Arrival> ArrivalTimeAsync(int stopListIndex, int arrivalIndex)
         {
             //string stop = "4117202";
             string stop;
@@ -213,7 +213,7 @@ namespace TransLoc_v1
                     }
                 }
 
-                Arrival nextArrival = currentStop.arrivals[0];
+                Arrival nextArrival = currentStop.arrivals[arrivalIndex % currentStop.arrivals.Count];
                 return nextArrival;
             }
 
