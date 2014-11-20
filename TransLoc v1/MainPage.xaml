@@ -64,6 +64,7 @@
             <Button Name="btnRefresh" Content="Refresh" Grid.Row="2" 
                     Height="Auto" Width="200" HorizontalAlignment="Right" Click="btnRefresh_Click"/>
         </Grid>
+        
 
         <!--Uncomment to see an alignment grid to help ensure your controls are
             aligned on common boundaries.  The image has a top margin of -32px to

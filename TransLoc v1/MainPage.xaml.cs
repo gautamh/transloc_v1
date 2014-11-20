@@ -14,15 +14,18 @@ using System.Net.Http;
 using Newtonsoft.Json;
 using Windows.Devices.Geolocation;
 using Microsoft.Phone.Tasks;
+using System.Collections.ObjectModel;
 
 namespace TransLoc_v1
 {
     public partial class MainPage : PhoneApplicationPage
     {
+
         Dictionary<string, string> routeMap = new Dictionary<string, string>();
         Dictionary<string, Stop> stopMap = new Dictionary<string, Stop>();
         List<KeyValuePair<string, Stop>> stopList = new List<KeyValuePair<string, Stop>>();
         Dictionary<int, Vehicle> vehicleMap = new Dictionary<int, Vehicle>();
+        ObservableCollection<DisplayItem> ArrivalList = new ObservableCollection<DisplayItem>();
 
         public static Geoposition currentPosition;
         HttpClient client;
@@ -32,9 +35,10 @@ namespace TransLoc_v1
         // Constructor
         public MainPage()
         {
+            
             InitializeComponent();
             client = new HttpClient();
-            client.DefaultRequestHeaders.Add("X-Mashape-Authorization", "5W3PkLlkFJEHYA5xAUEm2RnC0qeayeGW");
+            client.DefaultRequestHeaders.Add("X-Mashape-Authorization", GlobalVars.apiKey);
 
             // Sample code to localize the ApplicationBar
             //BuildLocalizedApplicationBar();
@@ -329,6 +333,61 @@ namespace TransLoc_v1
         //    ApplicationBar.MenuItems.Add(appBarMenuItem);
         //}
 
+        public class DisplayItem : INotifyPropertyChanged
+        {
+            private DateTime arrivalTime;
+            private string routeName;
+            private float fullPercent;
+            public event PropertyChangedEventHandler PropertyChanged;
+
+            public DisplayItem (DateTime arrivalTime, string routeName, float fullPercent)
+            {
+                this.arrivalTime = arrivalTime;
+                this.routeName = routeName;
+                this.fullPercent = fullPercent;
+            }
+
+            public DateTime ArrivalTime
+            {
+                get { return arrivalTime; }
+                set 
+                { 
+                    arrivalTime = value;
+                    OnPropertyChanged("ArrivalTime");
+                }
+            }
+
+            public string RouteName
+            {
+                get { return routeName;  }
+                set 
+                { 
+                    routeName = value;
+                    OnPropertyChanged("RouteName"); 
+                }
+            }
+
+            public float FullPercent
+            {
+                get { return fullPercent; }
+                set 
+                { 
+                    fullPercent = value;
+                    OnPropertyChanged("FullPercent");
+                }
+            }
+
+            protected void OnPropertyChanged(string name)
+            {
+                PropertyChangedEventHandler handler = PropertyChanged;
+                if (handler != null)
+                {
+                    handler(this, new PropertyChangedEventArgs(name));
+                }
+            }
+        }
+
+        //pubilc class ArrivalList : 
 
         //Arrival Estimate classes
         public class Arrival
